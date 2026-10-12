@@ -1,0 +1,65 @@
+
+# ZAKNODE FRAMEWORK: EVOLUTION ROADMAP (PRIORITIZED)
+
+"""
+PHASE 1: THE REINFORCED CONCRETE (Critical Infrastructure)
+Focus: Stability and scalability.
+"""
+    1. DECOUPLE CORE: Split 'base.py' into 'node.py' and 'modifier.py'.
+    2. EXPLICIT IMPORTS: Remove 'from .base import *' to prevent circular dependencies.✅
+    3. DT-INTEGRATION: Multiply all movement (e.g., AxisMove) by 'self.parentNode.game.dt'.✅
+    4. NAMING CONVENTION: Rename 'LoadImage' -> 'Image' and 'LoadImageGrid' -> 'SpriteSheet'.✅
+"""
+
+PHASE 2: THE NERVOUS SYSTEM (Architecture)
+Focus: Communication and views.
+"""
+    5. SIGNAL SYSTEM: Add 'trigger_event(name)' to Base class for decoupled node communication.✅
+    6. CAMERANODE: Implement a node that acts as a viewport to allow for worlds larger than the screen.
+"""
+
+PHASE 3: THE TOOLBOX (Feature Expansion)
+Focus: Gameplay building blocks.
+"""
+    7. STATE_MODIFIER: Create a Finite State Machine (FSM) to manage 'Idle/Run/Jump' states.
+    8. UI_NODES: Build 'Button' and 'Slider' nodes utilizing the 'CollisionArea' logic.
+    9. PHYSICS_LITE: Add 'GravityModifier' and 'FollowModifier'✅ (smooth target tracking).
+"""
+
+PHASE 4: THE FINISHING TOUCHES (Optimization)
+Focus: Performance and organization.
+"""
+    10. BISECT SORTING: Use 'bisect' module in 'addChild' for O(log n) Z-index management.
+    11. FOLDER SCALING: Move modules into /core, /nodes, /modifiers, and /resources directories.
+"""
+
+
+Changes:
+    1. Rotating visual blocks ✅
+    2. Active bool - if can interact and is shown ✅
+    3. Font added to Game node as XS, S, M, L, XL sizes ✅
+    4. When i resize the window, it gets saved into a txt file and the next time, it starts as that window, also add VH and VW, so block can depend on screen size✅
+    5. Resizing the window must change something in move modifiers, speed and some more things✅
+    6. Resizing the window should be done at a setted ratio, or you should have an option to give a ratio and the window will stay in that ratio (like is its 1:1, the window will be 1080 : 1080 and after making the width 960,
+        the height also changes, so its 960 : 960 in the end)✅
+
+Nodes:
+    1. InfiniteBackgroundSprite
+    2. Button 1/2
+    3. Particles
+    4. TileMap ✅
+
+Modifiers:
+    1. LoopingMusic✅
+    2. Timer (do something after a time (recallable))✅
+
+Resources:
+    1. Saving vars into a .txt file / Reading vars from .txt ✅
+
+
+Try:
+    1. resizing the window  ✅
+
+
+Repare
+    1. Rotating sprites ✅

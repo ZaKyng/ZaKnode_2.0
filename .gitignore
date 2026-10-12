@@ -1,0 +1,15 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build
+*.tar.gz
+*.egg-info/
+build/
+
+# Zipped
+*.zip
+
+.kilo/
