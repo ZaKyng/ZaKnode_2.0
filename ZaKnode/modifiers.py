@@ -1255,13 +1255,13 @@ class Timer(Modifier):
 
 #   # -- Sound/Music -- ##
 
-class SoundEffectPlayer(Modifier):
-    def __init__(self, parentNode : Node, volume : float = 1):
-        super().__init__(parentNode)
-        self.sounds = {}
-
-        self.change(volume = volume)
-
+class GlobalAPlayer(Modifier):
+    def __init__(self, parentNode : Node, volume : int = 100):
+            super().__init__(parentNode)
+            self.sounds = {}
+    
+            self.change(volume = volume)
+    
     def event(self, event):
         super().event(event)
     
@@ -1273,12 +1273,12 @@ class SoundEffectPlayer(Modifier):
 
         return canvas
 
-    def change(self, volume : float = None, active : bool = None):
+    def change(self, volume : int = None, active : bool = None):
         if volume is not None:
-            self.volume = max(0, min(volume, 1))
+            self.volume = max(0, min(volume, 100))
             for sound in self.sounds.values():
                 sound.parent_volume = self.volume
-                sound.sound.set_volume(sound.volume * self.volume)
+                sound.sound.set_volume((sound.volume / 100) * (self.volume / 100))
         super().modifierChange(active)
 
     def kill(self):
@@ -1286,19 +1286,78 @@ class SoundEffectPlayer(Modifier):
 
     def add(self, name : str, sound):
         self.sounds[name] = sound
+
+    def stop(self, name : str):
+        self.sounds[name].sound.stop()
+
+
+class GlobalSoundEffectPlayer(GlobalAPlayer):
+    def __init__(self, parentNode : Node, volume : int = 100):
+        super().__init__(parentNode, volume)
+
+    def event(self, event):
+        super().event(event)
+    
+    def update(self):
+        super().update()
+
+    def draw(self, canvas):
+        canvas = super().draw(canvas)
+        return canvas
+
+    def change(self, volume : int = None, active : bool = None):
+        super().change(volume, active)
+
+    def kill(self):
+        super().kill()
+
+    def add(self, name : str, sound):
+        super().add(name, sound)
     
     def play(self, name : str):
         self.sounds[name].sound.play()
 
     def stop(self, name : str):
-        self.sounds[name].sound.stop()
+        super().stop(name)
 
-class MusicPlayer(Modifier):
-    def __init__(self, parentNode : Node, volume = 1):
+class GlobalMusicPlayer(GlobalAPlayer):
+    def __init__(self, parentNode : Node, volume : int = 100):
+        super().__init__(parentNode, volume)
+
+    def event(self, event):
+        super().event(event)
+    
+    def update(self):
+        super().update()
+
+    def draw(self, canvas):
+        canvas = super().draw(canvas)
+        return canvas
+
+    def change(self, volume : int = None, active : bool = None):
+        super().change(volume, active)
+
+    def kill(self):
+        super().kill()
+
+    def add(self, name : str, sound):
+        super().add(name, sound)
+    
+    def play(self, name : str):
+        self.sounds[name].sound.play(loops = -1)
+
+    def stop(self, name : str):
+        super().stop(name)
+
+
+
+
+class RelativeListener(Modifier):
+    def __init__(self, parentNode : Node, max_distance : int, mode : str = "linear", strength : float = 3, inverted : bool = False, show : bool = False):
         super().__init__(parentNode)
-        self.tracks = {}
 
-        self.change(volume = volume)
+        self.relative_players = []
+        self.change(max_distance = max_distance, mode = mode, strength = strength, inverted = inverted, show = show)
 
     def event(self, event):
         super().event(event)
@@ -1311,22 +1370,63 @@ class MusicPlayer(Modifier):
 
         return canvas
 
-    def change(self, volume : float = None, active : bool = None):
-        if volume is not None:
-            self.volume = max(0, min(volume, 1))
-            for track in self.tracks.values():
-                track.parent_volume = self.volume
-                track.sound.set_volume(track.volume * self.volume)
-        super().modifierChange(active)
+    def change(self, max_distance : int = None, mode : str = None, strength : float = None, inverted : bool = None, show : bool = None, active : bool = None):
+        if max_distance is not None:
+            self.max_distance = max_distance
+
+        if mode is not None:
+            types = {
+                "none" : self.none,
+                "linear" : self.linear,
+                "ease-in" : self.easeIn
+            }
+
+            self.mode = types.get(mode.lower(), self.linear)
+
+        if strength is not None:
+            self.strangth = strength
+
+        if inverted is not None:
+            self.inverted = inverted
+
+        if show is not None:
+            self.show = show
+        super().modifierChange(active = active)
 
     def kill(self):
         super().kill()
 
-    def add(self, name : str, sound):
-        self.tracks[name] = sound
-    
-    def play(self, name : str):
-        self.tracks[name].sound.play(loops = -1)
+    #percentage = min(1, distance / self.max_distance)
 
-    def stop(self, name : str):
-        self.tracks[name].sound.stop()
+    def none(self, percentage, strength):
+        return 1 if percentage < 1 else 0
+    
+    def linear(self, percentage, strength):
+        return percentage if self.inevrt else 1 - percentage
+
+    def easeIn(self, percentage, strength):
+        return 1 - pow(1 - percentage, strength) if self.invert else pow(1 - percentage, strength)
+
+    def easeOut(self, percentage, strength):
+        return pow(percentage, strength) if self.invert else 1 - pow(percentage, strength)  
+
+class RelativeAPlayer(Modifier):
+    def __init__(self, parentNode : Node):
+        super().__init__(parentNode)
+
+    def event(self, event):
+        super().event(event)
+    
+    def update(self):
+        super().update()
+
+    def draw(self, canvas):
+        canvas = super().draw(canvas)
+
+        return canvas
+
+    def change(self, active : bool = None):
+        super().modifierChange(active = active)
+
+    def kill(self):
+        super().kill()

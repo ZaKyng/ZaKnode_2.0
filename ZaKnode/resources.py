@@ -64,15 +64,15 @@ class Animation:
             self.frames.append(framesArr[int(x)][int(y)])
 
 class Sound:
-    def __init__(self, path, volume : float = 1):
+    def __init__(self, path, volume : int = 100):
         self.sound = pygame.mixer.Sound(path)
-        self.volume = max(0, min(volume, 1))
-        self.parent_volume = 1
+        self.volume = max(0, min(volume, 100))
+        self.parent_volume = 100
         self.sound.set_volume(self.volume)
     
     def changeVolume(self, volume):
-        self.volume = max(0, min(volume, 1))
-        self.sound.set_volume(self.volume * self.parent_volume)
+        self.volume = max(0, min(volume, 100))
+        self.sound.set_volume((self.volume / 100) * (self.parent_volume / 100))
 
 
 def SaveData(path, index, value):
