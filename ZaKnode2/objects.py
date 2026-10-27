@@ -8,12 +8,15 @@ from . import resources
 # ----------- Objects ------------ #
 
 class ShowAxis:
+    """
+    Debuging object, to transform position, right in the window
+    """
     def __init__(self, parentNode : base.Node):
         self.parentNode = parentNode
-        self.images = resources.SpriteSheet(parentNode.game.directory("assets/axis.png"), Vector2(15, 15), alpha_channel = True)
+        self.images = resources.SpriteSheet(resources._directory(__file__, "assets/axis.png"), Vector2(15, 15), alpha_channel = True)
 
-        size = Vector2(40, 40)
-        gap = 50
+        size = Vector2(self.parentNode.game.simulation.size.x // 40, self.parentNode.game.simulation.size.x // 40)
+        gap = self.parentNode.game.simulation.size.x // 35
 
         offsets = [Vector2(gap, size.x // -2), Vector2(size.x // -2, gap), Vector2(gap, gap)]
         axis = ["x", "y", None]
@@ -33,7 +36,6 @@ class ShowAxis:
 
             self.modifiers.append(modifiers.MouseDragMove(self.parentNode, 98 + i, axis = axis[i]))
 
-
     
     def hide(self):
         for tile in self.tiles:
@@ -43,6 +45,9 @@ class ShowAxis:
             hitarea.kill()
 
 class Button:
+    """
+    Button for very quick tests
+    """
     def __init__(self, parentNode, text, func, font_name, font_size = "m", txt_color = (0, 0, 0), bg_color = (255, 255, 255), padding = 0, offset_str = None, offset = Vector2(0, 0), physics_layer = 0, hover_txt_color = None, hover_bg_color = None):
         self.button = nodes.TextBlock(parentNode, text, font_name, font_size = font_size, txt_color = txt_color, bg_color = bg_color, padding = padding, offset_str = offset_str, offset = offset)
         play_collision = nodes.CollisionArea(self.button, physics_layer)

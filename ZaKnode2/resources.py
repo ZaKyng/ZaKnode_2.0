@@ -11,12 +11,16 @@ from pygame import Vector2
 ## ----- Visual ----- ##
 
 
-def directory(file, src : str):
+def _directory(file, src : str):
     base_path = os.path.dirname(os.path.abspath(file))
 
     return os.path.normpath(os.path.join(base_path, src))
 
 class Image:
+    """
+    Use Game.directory(relative path) in path for easier working with file paths
+    Loads one image. pygame.Surface is in Image.image
+    """
     def __init__(self, path, alpha_channel = False):
         self.path = path
         self.rawImage = pygame.image.load(path)
@@ -31,6 +35,10 @@ class Image:
         self.rawImage = None
 
 class SpriteSheet:
+    """
+    Use Game.directory(relative path) in path for easier working with file paths
+    Loads image, cuts it into many smaller peaces and makes 2d array of tiles
+    """
     def __init__(self, path, oneFrameSize, alpha_channel = False):
         self.path = path
         self.rawImage = pygame.image.load(path)
@@ -52,18 +60,27 @@ class SpriteSheet:
         self.rawImage = None
 
 class Animation:
-    def __init__(self, framesArr, start : int, end : int):
+    """
+    frames_arr takes a list of pygame.Surface objects
+    ex.: [Image1.image, Image2.image] or [SpriteSheet1[0][1], SpriteSheet1[2][1]]
+    Holds one animation, to be reused
+    """
+    def __init__(self, frames_arr, start : int, end : int):
         if start > end:
             end, start = start, end
 
         self.frames = []
         for i in range(end - start + 1):
             frame = i + start
-            x = frame % max(len(framesArr), 1)
-            y = frame / max(len(framesArr), 1)
-            self.frames.append(framesArr[int(x)][int(y)])
+            x = frame % max(len(frames_arr), 1)
+            y = frame / max(len(frames_arr), 1)
+            self.frames.append(frames_arr[int(x)][int(y)])
 
 class Sound:
+    """
+    Volume is 0 - 100
+    Loads sound/song file
+    """
     def __init__(self, path, volume : int = 100):
         self.sound = pygame.mixer.Sound(path)
         self.volume = max(0, min(volume, 100))
@@ -76,6 +93,10 @@ class Sound:
 
 
 def SaveData(path, index, value):
+    """
+    Use Game.directory(relative path) in path for easier working with file paths
+    Save data for next time, the game is run
+    """
     try:
         with open(path, "r") as f:
             data = json.load(f)
@@ -90,6 +111,10 @@ def SaveData(path, index, value):
             json.dump(data, f, indent = 4)
 
 def SaveDataList(path, index : list, value : list):
+    """
+    Use Game.directory(relative path) in path for easier working with file paths
+    If saving multiple data points
+    """
     if len(index) != len(value):
         print("number of indexes and values doesnt match")
         return "error"
@@ -109,6 +134,10 @@ def SaveDataList(path, index : list, value : list):
             json.dump(data, f, indent = 4)
 
 def ReadData(path, index = None):
+    """
+    Use Game.directory(relative path) in path for easier working with file paths
+    Reads the stored data
+    """
     try:
         with open(path, "r") as f:
             data = json.load(f)

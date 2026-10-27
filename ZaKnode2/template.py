@@ -1,10 +1,11 @@
 import pygame
-from ZaKnode import *
+from ZaKnode2 import *
 
 # ----- Pygame setup ----- #
 def run():
-    screen_size = (1980, 1080)
-    my_game = nodes.Game(screen_size, __file__, fps = 120)
+    screen_size = (400, 200)
+    simulation_size = (screen_size[0] * 2, screen_size[1] * 2)
+    my_game = nodes.Game(screen_size, __file__, fps = 120, simulation_size = simulation_size)
 
     def global_input(event):
         if event.type == pygame.KEYDOWN:

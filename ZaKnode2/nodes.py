@@ -42,6 +42,9 @@ class default(Node):
 #   # -- Primary -- #
 
 class Game:
+    """
+    Whole game (scenes, rendering, window resizing, handeling input/updates)
+    """
     def __init__(self, 
                     window_size : tuple, 
                     file_location, 
@@ -61,26 +64,19 @@ class Game:
         self.offset = Vector2(0, 0)
         self.position = Vector2(0, 0)
 
+        self.children = []
+        self.collision = []
+
         self.game = self
         
-        self.fonts = FontManager(self)
-        self.signals = SignalManager(self)
-        self.scenes = SceneManager(self)
+        self.fonts = _FontManager(self)
+        self.signals = _SignalManager(self)
+        self.scenes = _SceneManager(self)
+        self.window = _WindowManager(self, window_size, fullscreen)
+        self.simulation = _SimulationManager(self, simulation_size)
+
+        self.fonts.addFont("default", resources._directory(__file__, "assets/default.ttf"))
         
-            
-        self.window_size = Vector2(window_size)
-        self.window_ratio = self.window_size.x / self.window_size.y
-        self.window_atr = pygame.FULLSCREEN if fullscreen else pygame.RESIZABLE
-
-        if simulation_size is None:
-            simulation_size = self.window_size
-        self.simulation_size = Vector2(simulation_size)
-        self.size = self.simulation_size
-        self.simulation_ratio = self.simulation_size.x / self.simulation_size.y
-        self.canvas = pygame.Surface(self.simulation_size)
-
-        self.vw = self.simulation_size.x / 100
-        self.vh = self.simulation_size.y / 100
 
         Scene(self.scenes.default_scene_name, self)
 
@@ -89,7 +85,7 @@ class Game:
         if relative_icon_path:
             pygame.display.set_icon(pygame.image.load(self.directory(relative_icon_path)))
 
-        self.windowResize(self.size)
+        self.window.resize(self.window.size)
 
         self.clock = pygame.time.Clock()
 
@@ -108,19 +104,19 @@ class Game:
                     self.running = False
 
                 elif event.type == pygame.VIDEORESIZE:
-                    self.windowResize(Vector2(event.size))
+                    self.window.resize(Vector2(event.size))
 
                 if global_input:
                     global_input(event)
             
-                self.scenes.scenes[self.scenes.current_scene].event(event)
+                self.event(event)
 
             if func:
                 func()
 
-            self.screen.fill((0, 0, 0))
+            self.window.screen.fill((0, 0, 0))
 
-            self.scenes.scenes[self.scenes.current_scene].update()
+            self.update()
             self.draw()
 
             pygame.display.flip()
@@ -137,42 +133,48 @@ class Game:
         else:
             base_path = os.path.dirname(os.path.abspath(self.file))
 
-        #return os.path.join(base_path, src)
         return os.path.normpath(os.path.join(base_path, src))
-
-    def windowResize(self, new_size):
-        self.signals.setOffSignal("window_size_changed")
-    
-        self.window_size = new_size
-        self.window_ratio = self.window_size.x / self.window_size.y
-        self.screen = pygame.display.set_mode(self.window_size, self.window_atr)
-
-
-        wider = self.window_ratio > self.simulation_ratio
-        
-        if wider:
-            self.canvas_size = Vector2(self.window_size.y * self.simulation_ratio, self.window_size.y)
-            self.canvas_position = Vector2((self.window_size.x - self.window_size.y * self.simulation_ratio) / 2, 0)
-        else:
-            self.canvas_size = Vector2(self.window_size.x,self.window_size.x / self.simulation_ratio)
-            self.canvas_position = Vector2(0, (self.window_size.y - self.window_size.x / self.simulation_ratio) / 2)
 
     def nothing(self):
         pass
 
+    def event(self, event):
+        self.scenes.scenes[self.scenes.current_scene].event(event)
+
+        for node in self.children:
+            self.canvas = node.event(event)
+
+    def update(self):
+        self.scenes.scenes[self.scenes.current_scene].update()
+
+        for node in self.children:
+            self.canvas = node.update()
+
     def draw(self):
-        self.canvas.fill((0, 0, 0))
-        self.canvas = self.scenes.scenes[self.scenes.current_scene].draw(self.canvas)
+        self.simulation.canvas.fill((0, 0, 0))
+        self.simulation.canvas = self.scenes.scenes[self.scenes.current_scene].draw(self.simulation.canvas)
 
-        self.screen.blit(pygame.transform.scale(self.canvas, self.canvas_size), self.canvas_position)
+        for node in self.children:
+            self.simulation.canvas = node.draw(self.simulation.canvas)
 
-class FontManager:
-    def __init__(self, game = Game):
+        self.window.screen.blit(pygame.transform.scale(self.simulation.canvas, self.window.render_size), self.window.render_position)
+
+    def addChild(self, newChild):
+        for i in range(len(self.children)):
+            if self.children[i].zindex >= newChild.zindex:
+                self.children.insert(i, newChild)
+                return
+        self.children.append(newChild)
+
+
+class _FontManager:
+    def __init__(self, game : Game):
         self.game = game
         self.fonts = {}
         
     def addFont(self, name, path, size : float = 2):
-        font_sizes = {"xs" : int(size * self.game.vh), "s" : int((size + 1) * self.game.vh), "m" : int((size + 2) * self.game.vh), "l" : int((size + 3) * self.game.vh), "xl" : int((size + 4) * self.game.vh)}
+        vh = self.game.simulation.size.y / 100
+        font_sizes = {"xs" : int(size * vh), "s" : int((size + 1) * vh), "m" : int((size + 2) * vh), "l" : int((size + 3) * vh), "xl" : int((size + 4) * vh)}
         new_font = {}
         new_font["raw-font"] = path
         new_font["size"] = size
@@ -181,20 +183,8 @@ class FontManager:
             new_font["font"][key] = pygame.font.Font(path, font_sizes[key])
         self.fonts[name] = new_font
 
-    def updateFont(self, name):
-        font_sizes = {"xs" : int(self.fonts[name]["size"] * self.game.vh),
-                      "s" : int((self.fonts[name]["size"] + 1) * self.game.vh),
-                      "m" : int((self.fonts[name]["size"] + 2) * self.game.vh),
-                      "l" : int((self.fonts[name]["size"] + 3) * self.game.vh),
-                      "xl" : int((self.fonts[name]["size"] + 4) * self.game.vh)
-                      }
-        if self.fonts[name]["raw-font"] is not None:
-            for key in self.fonts[name]["font"].keys():
-                if key != "raw-font" and key != "size":
-                    self.fonts[name]["font"][key] = pygame.font.Font(self.fonts[name]["raw-font"], font_sizes[key])
-
-class SignalManager:
-    def __init__(self, game = Game):
+class _SignalManager:
+    def __init__(self, game : Game):
         self.game = game
         self.signals = {}
     
@@ -204,8 +194,8 @@ class SignalManager:
     def setOffSignal(self, name):
         self.signals[name] = True
 
-class SceneManager:
-    def __init__(self, game = Game):
+class _SceneManager:
+    def __init__(self, game : Game):
         self.game = game
         self.scenes = {}
         self.game.signals.addSignal("scene_changed")
@@ -264,7 +254,51 @@ class SceneManager:
     def removeScene(self, name):
         self.scenes.pop(name)
 
+class _WindowManager:
+    def __init__(self, game : Game, window_size : tuple, fullscreen : bool = False):
+        self.game = game
+        self.size = Vector2(window_size)
+        self.ratio = self.size.x / self.size.y
+        self.atr = pygame.FULLSCREEN if fullscreen else pygame.RESIZABLE
+
+    def resize(self, new_size):
+        self.game.signals.setOffSignal("window_size_changed")
+    
+        self.size = Vector2(new_size)
+        self.ratio = self.size.x / self.size.y
+        self.screen = pygame.display.set_mode(self.size, self.atr)
+
+        wider = self.ratio > self.game.simulation.ratio
+        
+        if wider:
+            self.render_size = Vector2(self.size.y * self.game.simulation.ratio, self.size.y)
+            self.render_position = Vector2((self.size.x - self.size.y * self.game.simulation.ratio) / 2, 0)
+        else:
+            self.render_size = Vector2(self.size.x,self.size.x / self.game.simulation.ratio)
+            self.render_position = Vector2(0, (self.size.y - self.size.x / self.game.simulation.ratio) / 2)
+
+class _SimulationManager:
+    def __init__(self, game : Game, simulation_size : tuple = None):
+        self.game = game
+        self.change(simulation_size)
+
+    def change(self, size):
+        if size is None:
+            self.size = Vector2(self.game.window.size)
+        else:
+            self.size = Vector2(size)
+        self.ratio = self.size.x / self.size.y
+
+        self.game.size = self.size
+
+        self.canvas = pygame.Surface(self.size)
+
+#   # -- Basic nodes -- # 
+
 class Scene(Node):
+    """
+    The switchable visuals, main child of Game node
+    """
     def __init__(self, name : str, game : Game, bg_color = Color(0, 0, 0), onEntry : callable = None, onExit : callable = None):
         self.game = game
 
@@ -279,7 +313,7 @@ class Scene(Node):
         self.onEntry = None
         self.onExit = None
 
-        self.change(Color(bg_color), self.game.simulation_size, offset_str = "center", offset = Vector2(0, 0), onEntry = onEntry, onExit = onExit, active = True)
+        self.change(Color(bg_color), self.game.simulation.size, offset_str = "center", offset = Vector2(0, 0), onEntry = onEntry, onExit = onExit, active = True)
 
     def event(self, event):
         super().event(event)
@@ -325,6 +359,10 @@ class Scene(Node):
         self.surface.fill(self.bg_color)
         
 class BaseNode(Node):
+    """
+    Serves as a parent node, does nothing else, than set position and relative placement of children
+    Could be called conatiner
+    """
     def __init__(self, parentNode,  zindex : float = 0, offset_str : str = None, offset : Vector2 = Vector2(0, 0)):
         super().__init__(parentNode, size = Vector2(0, 0), zindex = zindex, offset_str = offset_str, offset = offset, active = True)
 
@@ -352,6 +390,10 @@ class BaseNode(Node):
         super().kill()
 
 class PredrawnCanvas(Node):
+    """
+    For elements, that dont have to be drawn every frame from scratch
+    Note: anything ouside of its size wont be seen
+    """
     def __init__(self, parentNode, size, zindex : float = 0, offset_str : str = None, offset : Vector2 = Vector2(0, 0)):
         super().__init__(parentNode, size = size, offset_str = offset_str, offset = offset, zindex = zindex)
 
@@ -389,6 +431,10 @@ class PredrawnCanvas(Node):
 #   # -- Logic -- #
 
 class CollisionArea(Node):
+    """
+    Physics layers are taken in base 2 (1, 2, 4, 8, 16, etc.) (you can do combinations)
+    For interaction of elements
+    """
     def __init__(self, parentNode, physics_layer : int = 0, show : bool = False, show_self : bool = False):
         super().__init__(parentNode, size = parentNode.size, zindex = 100, offset_str = None, offset = Vector2(0, 0))
         
@@ -436,8 +482,10 @@ class CollisionArea(Node):
 
 
     def kill(self):
-        for block in self.collision_blocks:
+        for block in self.collision_blocks[:]:
             block.kill()
+        if self in self.parentNode.collision:
+            self.parentNode.collision.remove(self)
         super().kill()
     
 
@@ -445,6 +493,9 @@ class CollisionArea(Node):
         return CollisionBlock(self, size, offset_str = offset_str, offset = offset)
 
 class CollisionBlock(Node):
+    """
+    Only as child of CollisionArea. Is a rectangle defining the areas shape
+    """
     def __init__(self, parentNode : CollisionArea, size : Vector2, zindex : float = -5, offset_str : str = None, offset : Vector2 = Vector2(0, 0)):
         super().__init__(parentNode, size = size, zindex = zindex, offset_str = offset_str, offset = offset)
         self.parentNode.collision_blocks.append(self)
@@ -467,8 +518,8 @@ class CollisionBlock(Node):
     def addChild(self, newChild):
         super().addChild(newChild)
     
-    def change(self, size = None, offset_str = None, offset = None, zindex = None, sizer = None):
-        super().nodeChange(size = size, offset_str = offset_str, offset = offset, zindex = zindex)
+    def change(self, size = None, offset_str = None, offset = None, zindex = None, sizer = None, active = None):
+        super().nodeChange(size = size, offset_str = offset_str, offset = offset, zindex = zindex, active = active)
 
         self.rect = pygame.Rect(self.position, self.size)
         if self.parentNode.show:
@@ -479,13 +530,18 @@ class CollisionBlock(Node):
             self.change(size = Vector2(self.size.x * sizer.x, self.size.y * sizer.y), offset = Vector2(self.offset.x * sizer.x, self.offset.y * sizer.y))
 
     def kill(self):
-        self.parentNode.collision_blocks.remove(self)
+        if self in self.parentNode.collision_blocks:
+            self.parentNode.collision_blocks.remove(self)
         super().kill()
 
 
 #   # -- Visuals -- #
 
 class Label(Node):
+    """
+    Font name must be predefined in Game object
+    Text with transparent background
+    """
     def __init__(self, parentNode, text : str, font_name : str, font_size : str = "m", color : Color = Color(255, 255, 255), zindex : float = 0, 
                 offset_str : str = None, offset : Vector2 = Vector2(0, 0)):
         super().__init__(parentNode, zindex = zindex, offset_str = offset_str, offset = offset)
@@ -545,6 +601,10 @@ class Label(Node):
         super().kill()
 
 class TextBlock(Node):
+    """
+    Font name must be predefined in Game object
+    Basic text with colored background + padding
+    """
     def __init__(self, parentNode, text : str, font_name : str, font_size : str = "m", txt_color = Color(255, 255, 255), bg_color = Color(0, 0, 0), padding = 0, zindex = 0, 
                 offset_str = None, offset = Vector2(0, 0), alpha_channel = False):
         super().__init__(parentNode, offset_str = offset_str, offset = offset, zindex = zindex)
@@ -630,6 +690,9 @@ class TextBlock(Node):
         super().kill()
 
 class ColorBlock(Node):
+    """
+    Rectangle of one color
+    """
     def __init__(self, parentNode, size, color = Color(255, 255, 255, 255), zindex = 0, offset_str = None, offset = Vector2(0, 0), alpha_channel = False):
         super().__init__(parentNode, size = size, offset_str = offset_str, offset = offset, zindex = zindex)
 
@@ -688,6 +751,10 @@ class ColorBlock(Node):
         super().kill()
 
 class SpriteBlock(Node):
+    """
+    Image is taken as pygame.Surface. Is made to use Image.image or SpriteSheet.sheet[x][y] from Resources of ZaKnode
+    Displays loaded image
+    """
     def __init__(self, parentNode, size, image, angle : int = None, zindex = 0, offset_str = None, offset = Vector2(0, 0)):
         super().__init__(parentNode, size = size, offset_str = offset_str, offset = offset, zindex = zindex, active = True)
         
@@ -742,16 +809,20 @@ class SpriteBlock(Node):
             self.change(size = Vector2(self.size.x * sizer.x, self.size.y * sizer.y), offset = Vector2(self.offset.x * sizer.x, self.offset.y * sizer.y))
 
 class AnimatedSpriteBlock(Node):
-    def __init__(self, parentNode, size, framesArr, fps, angle = None, zindex = 0, offset_str = None, offset = pygame.Vector2(0, 0)):
+    """
+    frames_arr is taken from Resources from Animation.frames
+    Animated sprite
+    """
+    def __init__(self, parentNode, size, frames_arr, fps, angle = None, zindex = 0, offset_str = None, offset = pygame.Vector2(0, 0)):
         super().__init__(parentNode, size = size, zindex = zindex, offset_str = offset_str, offset = offset, active = True)
 
         self.frames = []
 
         if angle is not None:
-            self.change(frames_arr = framesArr, fps = fps, angle = angle, offset_str = offset_str, offset = offset)
+            self.change(frames_arr = frames_arr, fps = fps, angle = angle, offset_str = offset_str, offset = offset)
         else:
             self.angle = 0
-            self.change(frames_arr = framesArr, fps = fps)
+            self.change(frames_arr = frames_arr, fps = fps)
 
     def event(self, event):
         super().event(event)
@@ -818,6 +889,10 @@ class AnimatedSpriteBlock(Node):
         super().kill()
 
 class TileMapBlock(Node):
+    """
+    tile_node must be SpriteSheet
+    Block, that can change its appearance based on coords in SpriteSheet
+    """
     def __init__(self, parentNode, size, tile_node, coords, zindex = 0, offset_str=None, offset = pygame.Vector2(0, 0)):
         super().__init__(parentNode, size = size, zindex = zindex, offset_str = offset_str, offset = offset)
         
@@ -887,6 +962,9 @@ class TileMapBlock(Node):
         super().kill()
 
 class TileMap(Node):
+    """
+    Parent of TileMapLayers manages 2D array of tiles from a SpreadSheet (Resources)
+    """
     def __init__(self, parentNode, tile_node, one_tile_size, zindex : float = 0):
         super().__init__(parentNode, size = Vector2(0, 0), offset = Vector2(0, 0), zindex = zindex)
 
@@ -941,13 +1019,17 @@ class TileMap(Node):
         return TileMapLayer(self, zindex)
 
 class TileMapLayer(Node):
+    """
+    Physics layers are taken in base 2 (1, 2, 4, 8, 16, etc.) (you can do combinations)
+    Manages own layer
+    """
     def __init__(self, tileMap : TileMap, physical : bool = False, physics_layer : int = 0, zindex : float = 0):
         super().__init__(tileMap, size = Vector2(0, 0), offset = Vector2(0, 0), zindex = zindex)
 
         self.blocks = {}
         self.collision_blocks = {}
 
-        self.collisionArea = CollisionArea(self, physics_layer = 0)
+        self.collision_area = CollisionArea(self, physics_layer = 0)
         self.change(physical = physical, physics_layer = physics_layer, zindex = zindex, active = True)
 
     def event(self, event):
@@ -967,12 +1049,12 @@ class TileMapLayer(Node):
     def change(self, physical : bool = None, physics_layer : int = None, zindex = None, active = None):
         if physical is not None:
             if physical:
-                self.collisionArea.change(active = True)
+                self.collision_area.change(active = True)
             else:
-                self.collisionArea.change(active = False)
+                self.collision_area.change(active = False)
         
         if physics_layer is not None:
-            self.collisionArea.change(physics_layer = physics_layer)
+            self.collision_area.change(physics_layer = physics_layer)
 
         super().nodeChange(zindex = zindex, active = active)
         
@@ -981,11 +1063,12 @@ class TileMapLayer(Node):
     
 
     def addTile(self, coords, tile_coords):
-        self.blocks[tuple(coords)] = TileMapBlock(self, self.parentNode.tile_size, self.parentNode.tile_node, tile_coords, offset = Vector2(coords[0] * self.parentNode.tile_size[0], coords[1] * self.parentNode.tile_size[1]))
+        if not tuple(coords) in self.blocks.keys():
+            self.blocks[tuple(coords)] = TileMapBlock(self, self.parentNode.tile_size, self.parentNode.tile_node, tile_coords, offset = Vector2(coords[0] * self.parentNode.tile_size[0], coords[1] * self.parentNode.tile_size[1]))
         
-    
     def changeTile(self, coords, tile_coords):
-        self.blocks[tuple(coords)].change(coords = tile_coords)
+        if tuple(coords) in self.blocks.keys():
+            self.blocks[tuple(coords)].change(coords = tile_coords)
     
     def killTile(self, coords):
         if tuple(coords) in self.blocks:
@@ -993,7 +1076,8 @@ class TileMapLayer(Node):
             del self.blocks[tuple(coords)]
     
     def addCollision(self, coords):
-        self.collision_blocks[tuple(coords)] = CollisionBlock(self.collisionArea, self.parentNode.tile_size, offset = Vector2(coords[0] * self.parentNode.tile_size[0], coords[1] * self.parentNode.tile_size[1]))
+        if not tuple(coords) in self.collision_blocks.keys():
+            self.collision_blocks[tuple(coords)] = CollisionBlock(self.collisionArea, self.parentNode.tile_size, offset = Vector2(coords[0] * self.parentNode.tile_size[0], coords[1] * self.parentNode.tile_size[1]))
         
     def killCollision(self, coords):
         if tuple(coords) in self.collision_blocks:

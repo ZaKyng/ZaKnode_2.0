@@ -7,7 +7,6 @@ from .base import Modifier, Node
 
 default_speed = 200
 
-
 """
 class default(Modifier):
     def __init__(self, parentNode : Node):
@@ -31,16 +30,16 @@ class default(Modifier):
         super().kill()
 """
 
-def avg(*args):
+def _avg(*args):
     return sum(args) / len(args)
 
-def getMousePosition(game, event = None):
+def _getMousePosition(game, event = None):
     if event is not None:
-        position_in_screen = Vector2(event.pos) - game.canvas_position
+        position_in_screen = Vector2(event.pos) - game.window.render_position
     else:
-        position_in_screen = Vector2(pygame.mouse.get_pos()) - game.canvas_position
+        position_in_screen = Vector2(pygame.mouse.get_pos()) - game.window.render_position
 
-    return Vector2(int((game.simulation_size.x / game.canvas_size.x) * position_in_screen.x), int((game.simulation_size.y / game.canvas_size.y) * position_in_screen.y))
+    return Vector2(int((game.simulation.size.x / game.window.render_size.x) * position_in_screen.x), int((game.simulation.size.y / game.window.render_size.y) * position_in_screen.y))
 
 # ----------- Modifiers ------------ #
 
@@ -50,6 +49,9 @@ def getMousePosition(game, event = None):
 
 
 class AxisMove(Modifier):
+    """
+    Move an object on x/y axis
+    """
     def __init__(self, parentNode : Node, start : int, end : int = None, axis : str = "x", mode : str = "linear", speed : float = default_speed, strength : float = 3, looping : bool = True, show_path : bool = False):
         super().__init__(parentNode)
 
@@ -89,8 +91,6 @@ class AxisMove(Modifier):
         self.partition = self.mode(percents, self.strength)
 
         new_offset = self.start + self.path_len * self.partition
-
-        #print([self.new_offset, self.last_offset, percents, partition])
 
         changer = self.parentNode.offset
 
@@ -148,14 +148,14 @@ class AxisMove(Modifier):
 
         if mode is not None:
             modes = {
-                "linear" : self.linear,
-                "ease-in" : self.easeIn,
-                "ease-out" : self.easeOut,
-                "ease-both" : self.easeBoth,
-                "ease-in-out" : self.easeBoth
+                "linear" : self._linear,
+                "ease-in" : self._easeIn,
+                "ease-out" : self._easeOut,
+                "ease-both" : self._easeBoth,
+                "ease-in-out" : self._easeBoth
             }
 
-            self.mode = modes.get(mode, self.linear)
+            self.mode = modes.get(mode, self._linear)
 
         super().modifierChange(active)
 
@@ -163,22 +163,25 @@ class AxisMove(Modifier):
         super().kill()
     
     
-    def linear(self, p, s):
+    def _linear(self, p, s):
         return p
 
-    def easeIn(self, p, s):
+    def _easeIn(self, p, s):
         return pow(p, s)
     
-    def easeOut(self, p, s):
+    def _easeOut(self, p, s):
         return 1 - pow(1 - p, s)
     
-    def easeBoth(self, p, s):
+    def _easeBoth(self, p, s):
         if p < 0.5:
             return pow(2, s - 1) * pow(p, s)
         else:
             return 1 - pow(-2 * p + 2, s) / 2
 
 class LinearMove(Modifier):
+    """
+    Move an object from one point to another and back 
+    """
     def __init__(self, parentNode : Node, end : Vector2, start : Vector2 = None, mode : str = "linear", speed : float = default_speed, strength : float = 3, looping : bool = True, show_path : bool = False):
         super().__init__(parentNode)
 
@@ -296,6 +299,9 @@ class LinearMove(Modifier):
             return 1 - pow(-2 * p + 2, s) / 2
 
 class CircularMove(Modifier):
+    """
+    Moves an object in a circular motion
+    """
     def __init__(self, parentNode : Node, relative_center : Vector2, radius : float = None, clockwise : bool = True, start_deg : float = 0, speed : float = default_speed, show_path : bool = False):
         super().__init__(parentNode)
 
@@ -380,6 +386,9 @@ class CircularMove(Modifier):
 
 
 class Follow(Modifier):
+    """
+    Makes an object follow anothers object origin
+    """
     def __init__(self, parentNode : Node, follow_node : Node, axis : str = "both", speed : float = default_speed):
         super().__init__(parentNode)
         self.change(follow_node = follow_node, speed = speed, axis = axis)
@@ -423,6 +432,10 @@ class Follow(Modifier):
 
 
 class Centralize(Modifier):
+    """
+    IDK if works well
+    Puts an objects origin into the center of "camera"
+    """
     def __init__(self, parentNode : Node, scene : Node):
         super().__init__(parentNode, zindex = 100)
         self.scene = scene
@@ -450,13 +463,16 @@ class Centralize(Modifier):
 #       ## - Mouse - ###
 
 class MouseClickMove(Modifier):
+    """
+    Object moves to position, where mouse clicks at
+    """
     def __init__(self, parentNode : Node):
         super().__init__(parentNode)
     
 
     def event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mouse = getMousePosition(self.game, event)
+            mouse = _getMousePosition(self.game, event)
             self.parentNode.change(offset = mouse - self.parentNode.parentNode.position + self.game.scenes.scenes[self.game.scenes.current_scene].position)
         super().event(event)
     
@@ -475,6 +491,10 @@ class MouseClickMove(Modifier):
         super().kill()
 
 class MouseDragMove(Modifier):
+    """
+    Physics layers are taken in base 2 (1, 2, 4, 8, 16, etc.) (you can do combinations)
+    Drag an object by mouse
+    """
     def __init__(self, parentNode : Node, physics_check : int = 1, axis : str = None):
         super().__init__(parentNode)
 
@@ -487,7 +507,7 @@ class MouseDragMove(Modifier):
     def event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 
-            mouse = getMousePosition(self.game, event)
+            mouse = _getMousePosition(self.game, event)
 
             for collision_area in self.parentNode.collision:
                 if collision_area.physics_layer == self.physics_check:
@@ -504,7 +524,7 @@ class MouseDragMove(Modifier):
     def update(self):
         if self.mouse_clicked:
 
-            mouse = getMousePosition(self.game)
+            mouse = _getMousePosition(self.game)
 
             global_pos = mouse + self.mouse_offset
             new_offset = self.parentNode.offset
@@ -537,7 +557,7 @@ class MouseDragMove(Modifier):
 
 #       ## - Keyboard - ###
 
-class KeyboardMove(Modifier):
+class _KeyboardMove(Modifier):
     def __init__(self, parentNode, speed, leave_window):
         super().__init__(parentNode)
 
@@ -579,7 +599,10 @@ class KeyboardMove(Modifier):
     def kill(self):
         super().kill()
 
-class KeyboardArrowsMove(KeyboardMove):
+class KeyboardArrowsMove(_KeyboardMove):
+    """
+    Move an object by arrows
+    """
     def __init__(self, parentNode : Node, speed : float = default_speed, leave_window : bool = False):
         super().__init__(parentNode, speed = speed, leave_window = leave_window)
 
@@ -607,7 +630,10 @@ class KeyboardArrowsMove(KeyboardMove):
     def kill(self):
         super().kill()
 
-class KeyboardWASDMove(KeyboardMove):
+class KeyboardWASDMove(_KeyboardMove):
+    """
+    Move an object by WASD
+    """
     def __init__(self, parentNode : Node, speed : float = default_speed, leave_window : bool = False):
         super().__init__(parentNode, speed = speed, leave_window = leave_window)
 
@@ -639,6 +665,11 @@ class KeyboardWASDMove(KeyboardMove):
 #   # -- User func -- ##
 
 class ClickObject(Modifier):
+    """
+    Physics layers are taken in base 2 (1, 2, 4, 8, 16, etc.) (you can do combinations)
+    Button intigers (none - all, 1 - left, 2 - middle, 3 - right)
+    Function will run when hitbox is clicked on/released on with any/one button 
+    """
     def __init__(self, parentNode : Node, physics_check : int, function : callable, buttondown : bool = True, button : int = None):
         super().__init__(parentNode)
         
@@ -653,15 +684,15 @@ class ClickObject(Modifier):
             self.event_type = pygame.MOUSEBUTTONUP
 
     def event(self, event):
-        if event.type == self.event_type and self.pressed(event):
+        if event.type == self.event_type and self._pressed(event):
 
-            mouse = getMousePosition(self.game, event)
+            mouse = _getMousePosition(self.game, event)
 
             for collision_area in self.parentNode.collision:
                 if not collision_area.active:
                     continue
 
-                if collision_area.physics_layer != self.physics_check:
+                if collision_area.physics_layer & self.physics_check == 0:
                     continue
 
                 for rect in collision_area.collision_blocks:
@@ -703,12 +734,17 @@ class ClickObject(Modifier):
         super().kill()
     
 
-    def pressed(self, event):
+    def _pressed(self, event):
         if self.button is None:
             return True
         return event.button == self.button
 
 class HoldObject(Modifier):
+    """
+    Physics layers are taken in base 2 (1, 2, 4, 8, 16, etc.) (you can do combinations)
+    Runs the function while pressing any/selected mouse button/s
+    Runs else_func function, if the opposit (not holding)
+    """
     def __init__(self, parentNode : Node, physics_check : int, function : callable, button : int = None, else_function : callable = None):
         super().__init__(parentNode)
 
@@ -721,23 +757,25 @@ class HoldObject(Modifier):
     def event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and self.pressed(event):
 
-            mouse = getMousePosition(self.game, event)
+            mouse = _getMousePosition(self.game, event)
 
             for collision_area in self.parentNode.collision:
                 if not collision_area.active:
                     continue
 
-                if collision_area.physics_layer != self.physics_check:
+                if collision_area.physics_layer & self.physics_check == 0:
                     continue
 
                 for rect in collision_area.collision_blocks:
                     if rect.rect.collidepoint(mouse):
                         self.holding = True
-                        return
+                        break
+
+                if self.holding:
+                    break
     
-        elif event.type == pygame.MOUSEBUTTONUP and self.pressed(event):
+        elif event.type == pygame.MOUSEBUTTONUP and self._pressed(event):
             self.holding = False
-            return
 
         super().event(event)
     
@@ -773,12 +811,17 @@ class HoldObject(Modifier):
         super().kill()
     
 
-    def pressed(self, event):
+    def _pressed(self, event):
         if self.button is None:
             return True
         return event.button == self.button
     
 class Hover(Modifier):
+    """
+    Physics layers are taken in base 2 (1, 2, 4, 8, 16, etc.) (you can do combinations)
+    If hovering over hitbox with mouse, function will be run once.
+    After leaving, it will run else_func function (if set).
+    """
     def __init__(self, parentNode : Node, physics_check : int, func : callable, else_func : callable = None):
         super().__init__(parentNode)
         self.last_frame = False
@@ -791,12 +834,12 @@ class Hover(Modifier):
     def update(self):
         did = False
 
-        mouse = getMousePosition(self.game)
+        mouse = _getMousePosition(self.game)
 
         for collision_area in self.parentNode.collision:
             if not collision_area.active:
                 continue
-            if collision_area.physics_layer != self.physics_check:
+            if collision_area.physics_layer & self.physics_check == 0:
                 continue
             for rect in collision_area.collision_blocks:
                 if rect.rect.collidepoint(mouse):
@@ -830,6 +873,11 @@ class Hover(Modifier):
         super().kill()
 
 class PressKey(Modifier):
+    """
+    Key is int for mouse (none - all, 1 - left, 2 - middle, 3 - right)
+    Key is pygame.K_... (from pygame)
+    Function will run once after pressing or releasing a key or a button (all is settible)
+    """
     def __init__(self, parentNode : Node, key, function : callable, keydown : bool = True, mouse : bool = False):
         super().__init__(parentNode)
 
@@ -866,13 +914,13 @@ class PressKey(Modifier):
         
         if mouse is not None or keydown is not None:
             if self.mouse_press:
-                self.input_type = self.mouse
+                self.input_type = self._mouse
                 if self.keydown:
                     self.event_type = pygame.MOUSEBUTTONDOWN
                 else:
                     self.event_type = pygame.MOUSEBUTTONUP
             else:
-                self.input_type = self.keyboard
+                self.input_type = self._keyboard
                 if self.keydown:
                     self.event_type = pygame.KEYDOWN
                 else:
@@ -884,13 +932,18 @@ class PressKey(Modifier):
         super().kill()
     
 
-    def mouse(self, event):
+    def _mouse(self, event):
         return event.button == self.key
     
-    def keyboard(self, event):
+    def _keyboard(self, event):
         return event.key == self.key
 
 class HoldKey(Modifier):
+    """
+    Key is int for mouse (none - all, 1 - left, 2 - middle, 3 - right)
+    Key is pygame.K_... (from pygame)
+    Function will run any time and while you press a key or button
+    """
     def __init__(self, parentNode : Node, key, function : callable, mouse : bool = False):
         super().__init__(parentNode)
 
@@ -923,15 +976,15 @@ class HoldKey(Modifier):
             self.func = func
 
         if mouse is not None:
-            self.mouse = mouse
+            self.mouse_press = mouse
         
         if mouse is not None or keydown is not None:
-            if self.mouse:
-                self.input_type = self.mouse
+            if self.mouse_press:
+                self.input_type = self._mouse
                 self.event_type = pygame.MOUSEBUTTONDOWN
                 self.else_event_type = pygame.MOUSEBUTTONUP
             else:
-                self.input_type = self.keyboard
+                self.input_type = self._keyboard
                 self.event_type = pygame.KEYDOWN
                 self.else_event_type = pygame.KEYUP
 
@@ -941,13 +994,16 @@ class HoldKey(Modifier):
         super().kill()
     
 
-    def mouse(self, event):
+    def _mouse(self, event):
         return event.button == self.key
     
-    def keyboard(self, event):
+    def _keyboard(self, event):
         return event.key == self.key
 
 class OnEventFunc(Modifier):
+    """
+    Will pass pygame event, if there is any
+    """
     def __init__(self, parentNode : Node, func : callable):
         super().__init__(parentNode)
         self.change(func = func)
@@ -974,6 +1030,9 @@ class OnEventFunc(Modifier):
         super().kill()
 
 class ForeverDo(Modifier):
+    """
+    Function will run every frame, if object is active
+    """
     def __init__(self, parentNode : Node, func : callable):
         super().__init__(parentNode)
         self.change(func = func)
@@ -999,6 +1058,9 @@ class ForeverDo(Modifier):
         super().kill()
 
 class SignalTrigger(Modifier):
+    """
+    Uses single use trigger, made in Game object
+    """
     def __init__(self, parentNode : Node, signal_name : str, func : callable):
         super().__init__(parentNode)
 
@@ -1029,6 +1091,10 @@ class SignalTrigger(Modifier):
         super().kill()
 
 class OnCollideDo(Modifier):
+    """
+    Physics layers are taken in base 2 (1, 2, 4, 8, 16, etc.) (you can do combinations)
+    Run function while 2 areas are colliding
+    """
     def __init__(self, parentNode : Node, func : callable, physics_check : int, parent_physics_layer : int = None):
         super().__init__(parentNode)
         if parent_physics_layer is None:
@@ -1040,7 +1106,20 @@ class OnCollideDo(Modifier):
         super().event(event)
     
     def update(self):
-        if self.checkForCollision(self.game.scenes.scenes[self.game.scenes.current_scene]):
+        self_collisions = []
+        
+        for parentColArea in self.parentNode.collision:
+            if not parentColArea.active:
+                continue
+
+            if not self.parent_physics_check(parentColArea):
+                continue
+
+            for parentRect in parentColArea.collision_blocks:
+                if not parentRect.active:
+                    self_collisions.append(parentRect.rect)
+
+        if self._checkForCollision(self.game.scenes.scenes[self.game.scenes.current_scene], self_collisions):
             self.func()
 
         super().update()
@@ -1059,9 +1138,9 @@ class OnCollideDo(Modifier):
 
         if parent_physics_layer is not None:
             if parent_physics_layer == "all":
-                self.parent_physics_check = self.allParentLayers
+                self.parent_physics_check = self._allParentLayers
             else:
-                self.parent_physics_check = self.parentLayers
+                self.parent_physics_check = self._parentLayers
                 self.parent_physics = list(parent_physics_layer)
 
         super().modifierChange(active)
@@ -1070,13 +1149,13 @@ class OnCollideDo(Modifier):
         super().kill()
 
     
-    def allParentLayers(self, collision_area):
+    def _allParentLayers(self, collision_area):
         return True
     
-    def parentLayers(self, collision_area):
+    def _parentLayers(self, collision_area):
         return collision_area.physics_layer in self.parent_physics
 
-    def checkForCollision(self, parentNode):
+    def _checkForCollision(self, parentNode, self_collisions):
         if not parentNode.active:
             return False
         
@@ -1089,31 +1168,28 @@ class OnCollideDo(Modifier):
                     if not collisionArea.active:
                         continue
 
-                    if collisionArea.physics_layer != self.physics_check:
+                    if collisionArea.physics_layer & self.physics_check == 0:
                         continue
 
-                    for collisionBlock in collisionArea.collision_blocks:
-                        if not collisionBlock.active:
+                    for collision_block in collisionArea.collision_blocks:
+                        if not collision_block.active:
                             continue
 
-                        for parentColArea in self.parentNode.collision:
-                            if not parentColArea.active:
-                                continue
-
-                            if not self.parent_physics_check(parentColArea):
-                                continue
-
-                            for parentRect in parentColArea.collision_blocks:
-                                if parentRect.rect.colliderect(collisionBlock.rect):
-                                    return True
+                        if collision_block.rect.collidelist(self_collisions) != -1:
+                            return True
                                 
             if hasattr(node, "children"):
-                if self.checkForCollision(node):
+                if self._checkForCollision(node, self_collisions):
                     return True
             
         return False
 
 class OnCollideBothObjects(Modifier):
+    """
+    Physics layers are taken in base 2 (1, 2, 4, 8, 16, etc.) (you can do combinations)
+    Single atribute of your function must be an ZaKnode object, the object, the other collision area is on.
+    It will never be able to affect multiple objects, on it's own.
+    """
     def __init__(self, parentNode : Node, func : callable, physics_check : int, parent_physics_layer : int = None):
         super().__init__(parentNode)
         if parent_physics_layer is None:
@@ -1125,7 +1201,20 @@ class OnCollideBothObjects(Modifier):
         super().event(event)
     
     def update(self):
-        output = self.checkForCollision(self.game.scenes.scenes[self.game.scenes.current_scene])
+        self_collisions = []
+        
+        for parentColArea in self.parentNode.collision:
+            if not parentColArea.active:
+                continue
+
+            if not self.parent_physics_check(parentColArea):
+                continue
+
+            for parentRect in parentColArea.collision_blocks:
+                if not parentRect.active:
+                    self_collisions.append(parentRect.rect)
+
+        output = self._checkForCollision(self.game.scenes.scenes[self.game.scenes.current_scene], self_collisions)
         if output[0]:
             self.func(output[1])
 
@@ -1145,9 +1234,9 @@ class OnCollideBothObjects(Modifier):
 
         if parent_physics_layer is not None:
             if parent_physics_layer == "all":
-                self.parent_physics_check = self.allParentLayers
+                self.parent_physics_check = self._allParentLayers
             else:
-                self.parent_physics_check = self.parentLayers
+                self.parent_physics_check = self._parentLayers
                 self.parent_physics = list(parent_physics_layer)
 
         super().modifierChange(active)
@@ -1156,15 +1245,15 @@ class OnCollideBothObjects(Modifier):
         super().kill()
 
     
-    def allParentLayers(self, collision_area):
+    def _allParentLayers(self, collision_area):
         return True
     
-    def parentLayers(self, collision_area):
+    def _parentLayers(self, collision_area):
         return collision_area.physics_layer in self.parent_physics
 
-    def checkForCollision(self, parentNode):
+    def _checkForCollision(self, parentNode, self_collisions):
         if not parentNode.active:
-            return False
+            return [False, None]
         
         if not hasattr(parentNode, "children"):
             return [False, None]
@@ -1176,37 +1265,31 @@ class OnCollideBothObjects(Modifier):
             if not hasattr(node, "collision"):
                 continue
 
-            for collisionArea in node.collision:
-                if not collisionArea.active:
+            for collision_area in node.collision:
+                if not collision_area.active:
                     continue
 
-                if collisionArea.physics_layer != self.physics_check:
+                if collision_area.physics_layer != self.physics_check:
                     continue
 
-                for collisionBlock in collisionArea.collision_blocks:
-                    if not collisionBlock.active:
+                for collision_block in collision_area.collision_blocks:
+                    if not collision_block.active:
                         continue
-                        
-                    for parentColArea in self.parentNode.collision:
-                        if not parentColArea.active:
-                            continue
-                        
-                        if not self.parent_physics_check(parentColArea):
-                            continue
 
-                        for parentRect in parentColArea.collision_blocks:
-                            if not parentRect.rect.colliderect(collisionBlock.rect):
-                                continue
-                            return [True, node]
+                    if collision_block.rect.collidelist(self_collisions) != -1:
+                        return [True, node]
                                     
             if hasattr(node, "children"):
-                found, collisionParent =  self.checkForCollision(node)
+                found, collisionParent =  self._checkForCollision(node, self_collisions)
                 if found:
                     return [True, collisionParent]
 
         return [False, None]
 
 class Timer(Modifier):
+    """
+    Start timer, to delay function by x seconds
+    """
     def __init__(self, parentNode : Node, time : float, func : callable):
         super().__init__(parentNode)
         self.elapsed = 0.0
@@ -1255,7 +1338,7 @@ class Timer(Modifier):
 
 #   # -- Sound/Music -- ##
 
-class GlobalAPlayer(Modifier):
+class _GlobalAPlayer(Modifier):
     def __init__(self, parentNode : Node, volume : int = 100):
             super().__init__(parentNode)
             self.sounds = {}
@@ -1287,40 +1370,17 @@ class GlobalAPlayer(Modifier):
     def add(self, name : str, sound):
         self.sounds[name] = sound
 
-    def stop(self, name : str):
-        self.sounds[name].sound.stop()
-
-
-class GlobalSoundEffectPlayer(GlobalAPlayer):
-    def __init__(self, parentNode : Node, volume : int = 100):
-        super().__init__(parentNode, volume)
-
-    def event(self, event):
-        super().event(event)
-    
-    def update(self):
-        super().update()
-
-    def draw(self, canvas):
-        canvas = super().draw(canvas)
-        return canvas
-
-    def change(self, volume : int = None, active : bool = None):
-        super().change(volume, active)
-
-    def kill(self):
-        super().kill()
-
-    def add(self, name : str, sound):
-        super().add(name, sound)
-    
     def play(self, name : str):
         self.sounds[name].sound.play()
 
     def stop(self, name : str):
-        super().stop(name)
+        self.sounds[name].sound.stop()
 
-class GlobalMusicPlayer(GlobalAPlayer):
+
+class GlobalSoundEffectPlayer(_GlobalAPlayer):
+    """
+    Play sounds - one shoot audio
+    """
     def __init__(self, parentNode : Node, volume : int = 100):
         super().__init__(parentNode, volume)
 
@@ -1344,89 +1404,62 @@ class GlobalMusicPlayer(GlobalAPlayer):
         super().add(name, sound)
     
     def play(self, name : str):
-        self.sounds[name].sound.play(loops = -1)
+        super().play(name)
 
     def stop(self, name : str):
         super().stop(name)
 
-
-
-
-class RelativeListener(Modifier):
-    def __init__(self, parentNode : Node, max_distance : int, mode : str = "linear", strength : float = 3, inverted : bool = False, show : bool = False):
-        super().__init__(parentNode)
-
-        self.relative_players = []
-        self.change(max_distance = max_distance, mode = mode, strength = strength, inverted = inverted, show = show)
-
-    def event(self, event):
-        super().event(event)
-    
-    def update(self):
-        super().update()
-
-    def draw(self, canvas):
-        canvas = super().draw(canvas)
-
-        return canvas
-
-    def change(self, max_distance : int = None, mode : str = None, strength : float = None, inverted : bool = None, show : bool = None, active : bool = None):
-        if max_distance is not None:
-            self.max_distance = max_distance
-
-        if mode is not None:
-            types = {
-                "none" : self.none,
-                "linear" : self.linear,
-                "ease-in" : self.easeIn
-            }
-
-            self.mode = types.get(mode.lower(), self.linear)
-
-        if strength is not None:
-            self.strangth = strength
-
-        if inverted is not None:
-            self.inverted = inverted
-
-        if show is not None:
-            self.show = show
-        super().modifierChange(active = active)
-
-    def kill(self):
-        super().kill()
-
-    #percentage = min(1, distance / self.max_distance)
-
-    def none(self, percentage, strength):
-        return 1 if percentage < 1 else 0
-    
-    def linear(self, percentage, strength):
-        return percentage if self.inevrt else 1 - percentage
-
-    def easeIn(self, percentage, strength):
-        return 1 - pow(1 - percentage, strength) if self.invert else pow(1 - percentage, strength)
-
-    def easeOut(self, percentage, strength):
-        return pow(percentage, strength) if self.invert else 1 - pow(percentage, strength)  
-
-class RelativeAPlayer(Modifier):
-    def __init__(self, parentNode : Node):
-        super().__init__(parentNode)
+class GlobalMusicPlayer(_GlobalAPlayer):
+    """
+    Play music - looping
+    """
+    def __init__(self, parentNode : Node, volume : int = 100):
+        super().__init__(parentNode, volume)
+        self.queue = {}
+        self.playing = []
 
     def event(self, event):
         super().event(event)
     
     def update(self):
+        for song in self.sounds.keys():
+            if self.sounds[song].get_busy():
+                if not song in self.playing:
+                    self.playing.append(song)
+            else:
+                if song in self.playing:
+                    self.playing.remove(song)
         super().update()
 
     def draw(self, canvas):
         canvas = super().draw(canvas)
-
         return canvas
 
-    def change(self, active : bool = None):
-        super().modifierChange(active = active)
+    def change(self, volume : int = None, active : bool = None):
+        super().change(volume, active)
 
     def kill(self):
         super().kill()
+
+
+    def add(self, name : str, sound):
+        super().add(name, sound)
+    
+    def playLooping(self, name : str):
+        self.sounds[name].sound.play(loops = -1)
+
+    def play(self, name : str):
+        super().play(name)
+
+    def playAfter(self, afterThis : str, name : str):
+        self.queue[afterThis] = name
+
+    def pause(self, name : str):
+        if self.sounds[name].get_busy():
+            self.sounds[name].pause()
+        else:
+            self.sounds[name].unpause()
+
+    def stop(self, name : str):
+        super().stop(name)
+

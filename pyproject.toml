@@ -1,0 +1,40 @@
+[project]
+name = "ZaKnode2"
+version = "1.0"
+authors = [
+  { name="Olievr Jan Pohl", email="zakyng32@gmail.com" },
+]
+
+description = "Pygame based game development library"
+readme = "README.md"
+requires-python = ">=3.13"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+dynamic = ["dependencies"]
+
+[tool.setuptools]
+packages = ["ZaKnode2"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.package-data]
+
+ZaKnode2 = ["assets/**/*"]
+
+[project.scripts]
+lib = "ZaKnode2.__main__:run"
+
+
+[project.urls]
+Homepage = "https://github.com/ZaKyng/ZaKnode_2.0"
+Issues = "https://github.com/ZaKyng/ZaKnode_2.0/issues"
+
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+

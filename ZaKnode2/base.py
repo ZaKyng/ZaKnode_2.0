@@ -6,7 +6,7 @@ from pygame import Vector2
 __all__ = ["Modifier", "Node"]
 
 
-def positionFromStr(string: str, size, parentNode_size):
+def _positionFromStr(string: str, size, parentNode_size):
     sw, sh = Vector2(size)
     pw, ph = Vector2(parentNode_size)
     
@@ -46,17 +46,12 @@ class Base:
 
 
     def kill(self):
-        if hasattr(self, "children"):
-            for child in self.children[:]:
-                child.kill()
-
-            self.children.clear()
-            self.collision.clear()
-
         if self.parentNode:
             if self in self.parentNode.children:
                 self.parentNode.children.remove(self)
             self.parentNode = None
+
+        del self
     
     def universalChange(self, active = None):
         if active is not None:
@@ -128,7 +123,7 @@ class Node(Base):
             self.parentNode.addChild(self)
 
         if offset_str is not None:
-            self.offset = positionFromStr(offset_str.lower(), self.size, self.parentNode.size)
+            self.offset = _positionFromStr(offset_str.lower(), self.size, self.parentNode.size)
             if offset is not None:
                 self.offset += Vector2(offset)
         elif offset is not None:
@@ -142,5 +137,10 @@ class Node(Base):
             child.change()
     
     def kill(self):
+        for child in self.children[:]:
+            child.kill()
+
+        self.children.clear()
+        self.collision.clear()
         super().kill()
 

@@ -9,8 +9,8 @@ from . import *
 # ----- Pygame setup ----- #
 def run():
     window_size = (1600, 900)
+    simualtion_size = (3200, 180)
     my_game = nodes.Game(window_size, __file__, fps = 120)
-    my_game.fonts.addFont("default", my_game.directory("assets/font1.ttf"))
 
     bonsai = resources.Image(my_game.directory("assets/bonsai.png"), alpha_channel = True)
 
@@ -39,15 +39,15 @@ def run():
     parent1 = nodes.BaseNode(scene1, offset = Vector2(150, 150))
     objects.ShowAxis(parent1)
     block1 = nodes.ColorBlock(parent1, (80, 80), (170, 200, 20, 90), alpha_channel = True)
-    block1_2 = nodes.ColorBlock(parent1, (80, 80))
-    block1_3 = nodes.ColorBlock(parent1, (80, 80), offset = Vector2(100, 0))
+    block1_2 = nodes.ColorBlock(parent1, (80, 80), (255, 20, 60))
+    block1_3 = nodes.ColorBlock(parent1, (80, 80), (90, 150, 30), offset = Vector2(100, 0))
     block2 = nodes.ColorBlock(parent1, (80, 80), offset = Vector2(100, 0))
     
     modifier1_1 = modifiers.AxisMove(block1, 0, 700, speed = 100, mode = "linear", strength = 6, show_path = True)
     modifier1_2 = modifiers.AxisMove(block1_2, 0, 700, speed = 300, mode = "ease-in", strength = 0.6)
     modifier1_22 = modifiers.AxisMove(block1_3, 0, 700, speed = 300, axis = "y", mode = "ease-out", strength = 12, show_path = True)
     modifier1_222 = modifiers.CircularMove(block2, Vector2(100, 100), 100, show_path = True)
-    modifier1_223 = modifiers.Centralize(block2, scene1)
+    #modifier1_223 = modifiers.Centralize(block2, scene1)
 
     modifier1_2.change(axis = "y")
 
@@ -58,9 +58,18 @@ def run():
     my_game.signals.addSignal("change_color")
     modifier1_3 = modifiers.ClickObject(block1, 8, lambda: my_game.signals.setOffSignal("change_color"))
 
-    desc = nodes.TextBlock(scene1, "Visible axis can change objects position", my_game.fonts.fonts["default"], "m", offset_str="bottom", offset = Vector2(0, -120))
-    desc_1 = nodes.TextBlock(scene1, "Red line shows the path of AxisMove", my_game.fonts.fonts["default"], "m", offset_str="bottom", offset = Vector2(0, -80))
     desc1 = nodes.Label(scene1, "Showcase of linear and gradual interpolation on block of color", my_game.fonts.fonts["default"], font_size = "l", offset_str="top")
+
+    scene2 = nodes.Scene("scene2", my_game, (200, 60, 120))
+
+    static = nodes.ColorBlock(scene2, (80, 80))
+    moving = nodes.ColorBlock(scene2, (80, 80), (200, 0, 0), offset= (100, 200))
+
+    nodes.CollisionArea(static, 1).addCollisionBlock(static.size)
+    nodes.CollisionArea(moving, 5).addCollisionBlock(moving.size)
+
+    modifiers.KeyboardWASDMove(moving)
+    modifiers.OnCollideDo(moving, lambda: print(my_game.delta), 1)
 
     press_global = []
     for scene in list(my_game.scenes.scenes.values()):
