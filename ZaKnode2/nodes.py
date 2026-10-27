@@ -416,7 +416,7 @@ class PredrawnCanvas(Node):
     def change(self, size = None, offset_str = None, offset = None, zindex = None, active = None):
         if size is not None:
             self.canvas = pygame.Surface(size, pygame.SRCALPHA)
-        self.redrawCanvas()
+            self.redrawCanvas()
         super().nodeChange(size = size, offset_str = offset_str, offset = offset, zindex = zindex, active = active)
         
     def kill(self):
@@ -424,9 +424,17 @@ class PredrawnCanvas(Node):
 
 
     def redrawCanvas(self):
+        self.position = Vector2(0, 0)
+        for child in self.children:
+            child.change()
+
         self.canvas.fill((0, 0, 0, 0))
 
         self.canvas = super().draw(self.canvas)
+
+        self.change()
+
+
 
 #   # -- Logic -- #
 
