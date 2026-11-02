@@ -30,7 +30,7 @@ class ShowAxis:
 
         for i in range(3):
             self.tiles.append(nodes.TileMapBlock(self.parentNode, size, self.images, [1 + i, 0], zindex = 600, offset = offsets[i]))
-            new_area = nodes.CollisionArea(self.parentNode, 98 + i, show = True)
+            new_area = nodes.CollisionArea(self.parentNode, 98 + i)
             new_area.addCollisionBlock(size, offset = offsets[i])
             self.hitareas.append(new_area)
 

@@ -142,13 +142,13 @@ class Game:
         self.scenes.scenes[self.scenes.current_scene].event(event)
 
         for node in self.children:
-            self.canvas = node.event(event)
+            node.event(event)
 
     def update(self):
         self.scenes.scenes[self.scenes.current_scene].update()
 
         for node in self.children:
-            self.canvas = node.update()
+            node.update()
 
     def draw(self):
         self.simulation.canvas.fill((0, 0, 0))
