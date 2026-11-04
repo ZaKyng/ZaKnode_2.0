@@ -19,8 +19,6 @@ class default(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, active : bool = None):
@@ -107,8 +105,7 @@ class AxisMove(Modifier):
     def draw(self, canvas):
         if self.show:
             pass
-        canvas = super().draw(canvas)
-
+        
         return canvas
 
     def change(self, start : int = None, end : int = None, axis : str = None, mode : str = None, speed : float = None, strength : float = None, looping : bool = None, show_path : bool = None, active : bool = None):
@@ -233,7 +230,6 @@ class LinearMove(Modifier):
     def draw(self, canvas):
         if self.show:
             pass
-        canvas = super().draw(canvas)
 
         return canvas
     
@@ -340,8 +336,7 @@ class CircularMove(Modifier):
         if self.show:
             center = self.parentNode.position + Vector2(math.cos(self.angle) * self.radius, math.sin(self.angle) * self.radius) * -1
             pygame.draw.circle(canvas, (255, 0, 0), center, abs(self.radius), width = 2)
-        canvas = super().draw(canvas)
-
+        
         return canvas
 
     def kill(self):
@@ -410,8 +405,6 @@ class Follow(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, follow_node : Node = None, speed : int = None, axis : str = None, active : bool = None):
@@ -448,8 +441,6 @@ class Centralize(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, active : bool = None):
@@ -480,8 +471,6 @@ class MouseClickMove(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, active : bool = None):
@@ -535,8 +524,6 @@ class MouseDragMove(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
     
     def change(self, physics_check = None, axis = None, active = None):
@@ -583,8 +570,6 @@ class _KeyboardMove(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, speed : float = None, leave_window : bool = None, active : bool = None):
@@ -620,8 +605,6 @@ class KeyboardArrowsMove(_KeyboardMove):
         super().update(direction)
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
     
     def change(self, speed : float = None, leave_window : bool = None,  active : bool = None):
@@ -651,8 +634,6 @@ class KeyboardWASDMove(_KeyboardMove):
         super().update(direction)
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
     
     def change(self, speed : float = None, leave_window : bool = None, active : bool = None):
@@ -708,8 +689,6 @@ class ClickObject(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, physics_check : int = None, func = None, buttondown : bool = None, button : int = None, active : bool = None):
@@ -788,8 +767,6 @@ class HoldObject(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
     
     def change(self, physics_check : int = None, func : callable = None, button : int = None, else_func : callable = None, active : bool = None):
@@ -853,8 +830,6 @@ class Hover(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
     
     def change(self, physics_check = None, func = None, else_func = None, active : bool = None):
@@ -895,8 +870,6 @@ class PressKey(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
     
     def change(self, key = None, func : callable = None, keydown : bool = None, mouse : bool = None, active : bool = None):
@@ -964,8 +937,6 @@ class HoldKey(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
     
     def change(self, key = None, func : callable = None, keydown : bool = None, mouse : bool = None, active : bool = None):
@@ -1016,8 +987,6 @@ class OnEventFunc(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, func : callable = None, active : bool = None):
@@ -1045,8 +1014,6 @@ class ForeverDo(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, func : callable = None, active : bool = None):
@@ -1076,8 +1043,6 @@ class SignalTrigger(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, name : str = None, func : callable = None, active : bool = None):
@@ -1125,8 +1090,6 @@ class OnCollideDo(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, func : callable = None, physics_check : int = None, parent_physics_layer : int = None, active : bool = None):
@@ -1221,8 +1184,6 @@ class OnCollideBothObjects(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, func : callable = None, physics_check : int = None, parent_physics_layer : int = None, active : bool = None):
@@ -1308,8 +1269,6 @@ class Timer(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, time : float = None, func : callable = None, active : bool = None):
@@ -1352,8 +1311,6 @@ class _GlobalAPlayer(Modifier):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
-
         return canvas
 
     def change(self, volume : int = None, active : bool = None):
@@ -1391,7 +1348,6 @@ class GlobalSoundEffectPlayer(_GlobalAPlayer):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
         return canvas
 
     def change(self, volume : int = None, active : bool = None):
@@ -1432,7 +1388,6 @@ class GlobalMusicPlayer(_GlobalAPlayer):
         super().update()
 
     def draw(self, canvas):
-        canvas = super().draw(canvas)
         return canvas
 
     def change(self, volume : int = None, active : bool = None):
