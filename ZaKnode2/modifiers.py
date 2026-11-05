@@ -1065,6 +1065,8 @@ class OnCollideDo(Modifier):
         if parent_physics_layer is None:
             parent_physics_layer = "all"
 
+        self.updateParentCollisions()
+
         self.change(func = func, physics_check = physics_check, parent_physics_layer =  parent_physics_layer)
 
     def event(self, event):
@@ -1111,6 +1113,20 @@ class OnCollideDo(Modifier):
     def kill(self):
         super().kill()
 
+
+    def updateParentCollisions(self):
+        self.parent_collisions = []
+                
+        for parentColArea in self.parentNode.collision:
+            if not parentColArea.active:
+                continue
+
+            if not self.parent_physics_check(parentColArea):
+                continue
+
+            for parentRect in parentColArea.collision_blocks:
+                if not parentRect.active:
+                    self.parent_collisions.append(parentRect.rect)
     
     def _allParentLayers(self, collision_area):
         return True
@@ -1118,7 +1134,7 @@ class OnCollideDo(Modifier):
     def _parentLayers(self, collision_area):
         return collision_area.physics_layer in self.parent_physics
 
-    def _checkForCollision(self, parentNode, self_collisions):
+    def _checkForCollision(self, parentNode):
         if not parentNode.active:
             return False
         
@@ -1138,11 +1154,11 @@ class OnCollideDo(Modifier):
                         if not collision_block.active:
                             continue
 
-                        if collision_block.rect.collidelist(self_collisions) != -1:
+                        if collision_block.rect.collidelist(self.parent_collisions) != -1:
                             return True
                                 
             if hasattr(node, "children"):
-                if self._checkForCollision(node, self_collisions):
+                if self._checkForCollision(node):
                     return True
             
         return False
@@ -1157,6 +1173,8 @@ class OnCollideBothObjects(Modifier):
         super().__init__(parentNode)
         if parent_physics_layer is None:
             parent_physics_layer = "all"
+
+        self.updateParentCollisions()
             
         self.change(func = func, physics_check = physics_check, parent_physics_layer =  parent_physics_layer)
 
@@ -1164,20 +1182,7 @@ class OnCollideBothObjects(Modifier):
         super().event(event)
     
     def update(self):
-        self_collisions = []
-        
-        for parentColArea in self.parentNode.collision:
-            if not parentColArea.active:
-                continue
-
-            if not self.parent_physics_check(parentColArea):
-                continue
-
-            for parentRect in parentColArea.collision_blocks:
-                if not parentRect.active:
-                    self_collisions.append(parentRect.rect)
-
-        output = self._checkForCollision(self.game.scenes.scenes[self.game.scenes.current_scene], self_collisions)
+        output = self._checkForCollision(self.game.scenes.scenes[self.game.scenes.current_scene], self.parent_collisions)
         if output[0]:
             self.func(output[1])
 
@@ -1205,18 +1210,29 @@ class OnCollideBothObjects(Modifier):
     def kill(self):
         super().kill()
 
-    
+
+    def updateParentCollisions(self):
+        self.parent_collisions = []
+                
+        for parentColArea in self.parentNode.collision:
+            if not parentColArea.active:
+                continue
+
+            if not self.parent_physics_check(parentColArea):
+                continue
+
+            for parentRect in parentColArea.collision_blocks:
+                if not parentRect.active:
+                    self.parent_collisions.append(parentRect.rect)
+
     def _allParentLayers(self, collision_area):
         return True
     
     def _parentLayers(self, collision_area):
         return collision_area.physics_layer in self.parent_physics
 
-    def _checkForCollision(self, parentNode, self_collisions):
+    def _checkForCollision(self, parentNode):
         if not parentNode.active:
-            return [False, None]
-        
-        if not hasattr(parentNode, "children"):
             return [False, None]
         
         for node in parentNode.children:
@@ -1230,18 +1246,18 @@ class OnCollideBothObjects(Modifier):
                 if not collision_area.active:
                     continue
 
-                if collision_area.physics_layer != self.physics_check:
+                if collision_area.physics_layer & self.physics_check == 0:
                     continue
 
                 for collision_block in collision_area.collision_blocks:
                     if not collision_block.active:
                         continue
 
-                    if collision_block.rect.collidelist(self_collisions) != -1:
+                    if collision_block.rect.collidelist(self.parent_collisions) != -1:
                         return [True, node]
                                     
             if hasattr(node, "children"):
-                found, collisionParent =  self._checkForCollision(node, self_collisions)
+                found, collisionParent =  self._checkForCollision(node)
                 if found:
                     return [True, collisionParent]
 
